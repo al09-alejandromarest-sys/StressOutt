@@ -575,9 +575,9 @@ body.dark select.input {
           La plataforma de productividad para estudiantes que centraliza clases, tareas, exámenes y métricas en un único espacio de trabajo inteligente.
         </p>
         <div style="display:flex;align-items:center;gap:1rem;flex-wrap:wrap;">
-          <button class="btn btn-primary open-dash-btn" style="padding:.875rem 1.75rem;font-size:.95rem;">
-            Comenzar gratis <i class="fas fa-arrow-right" style="font-size:.8rem;"></i>
-          </button>
+          <button class="btn btn-primary open-dash-btn" onclick="openLoginOrDash()">
+  Comenzar gratis <i class="fas fa-arrow-right"></i>
+</button>
           <p style="font-size:.8rem;color:var(--ink-300);font-weight:600;"><i class="fas fa-check" style="color:#10B981;margin-right:.3rem;"></i>Gratis para siempre · Sin tarjeta</p>
         </div>
       </div>
@@ -672,7 +672,10 @@ body.dark select.input {
             <li style="font-size:.875rem;display:flex;align-items:center;gap:.5rem;"><i class="fas fa-check" style="color:#10B981;width:14px;"></i>Focus Timer Pomodoro</li>
             <li style="font-size:.875rem;display:flex;align-items:center;gap:.5rem;"><i class="fas fa-check" style="color:#10B981;width:14px;"></i>Calendario y Agenda</li>
           </ul>
-          <button class="btn btn-ghost open-dash-btn" style="width:100%;justify-content:center;" onclick="selectPlan('starter')">Empezar gratis</button>
+          <button class="btn btn-primary open-dash-btn" onclick="openLoginOrDash()">
+  Empezar gratis <i class="fas fa-arrow-right"></i>
+</button>
+
         </div>
         <div class="card" style="padding:2rem;border:2px solid var(--cobalt);position:relative;box-shadow:0 16px 40px rgba(37,99,235,.12);">
           <span style="position:absolute;top:-13px;left:50%;transform:translateX(-50%);background:var(--cobalt);color:#fff;font-size:.72rem;font-weight:800;padding:.3rem .875rem;border-radius:100px;font-family:var(--font-display);letter-spacing:.04em;">RECOMENDADO</span>
@@ -2487,19 +2490,223 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 </script>
 <script>
-function doLogin() {
-    document.getElementById("login-screen").style.display = "none";
-}
+// Se ha eliminado la función doLogin() duplicada para que funcione la principal
 
-function togglePass() {}
+function togglePass() {
+    const passInput = document.getElementById("login-pass");
+    const eyeIcon = document.getElementById("eye-icon");
+    if (passInput.type === "password") {
+        passInput.type = "text";
+        eyeIcon.classList.remove("fa-eye");
+        eyeIcon.classList.add("fa-eye-slash");
+    } else {
+        passInput.type = "password";
+        eyeIcon.classList.remove("fa-eye-slash");
+        eyeIcon.classList.add("fa-eye");
+    }
+}
 
 function openLoginOrDash() {
-    document.getElementById("login-screen").style.display = "block";
-}
-
-function toggleDarkMode() {
-    document.body.classList.toggle("dark");
+    // Si ya tienes la sesión iniciada, te lleva al Workspace
+    if (typeof userName !== 'undefined' && userName !== null) {
+        document.getElementById("login-screen").classList.add("out");
+        setTimeout(() => {
+            document.getElementById("login-screen").style.display = "none";
+        }, 500);
+    } else {
+        // Si no has iniciado sesión, te muestra la pantalla negra de Login
+        const loginScreen = document.getElementById("login-screen");
+        loginScreen.style.display = "flex";
+        // Pequeño retraso para que la animación se vea suave
+        setTimeout(() => {
+            loginScreen.classList.remove("out");
+        }, 10);
+    }
 }
 </script>
 </body>
 </html>
+<script>
+// Se ha eliminado la función doLogin() duplicada para que funcione la principal
+
+function togglePass() {
+    const passInput = document.getElementById("login-pass");
+    const eyeIcon = document.getElementById("eye-icon");
+    if (passInput.type === "password") {
+        passInput.type = "text";
+        eyeIcon.classList.remove("fa-eye");
+        eyeIcon.classList.add("fa-eye-slash");
+    } else {
+        passInput.type = "password";
+        eyeIcon.classList.remove("fa-eye-slash");
+        eyeIcon.classList.add("fa-eye");
+    }
+}
+
+function openLoginOrDash() {
+    // Si ya tienes la sesión iniciada, te lleva al Workspace
+    if (typeof userName !== 'undefined' && userName !== null) {
+        document.getElementById("login-screen").classList.add("out");
+        setTimeout(() => {
+            document.getElementById("login-screen").style.display = "none";
+        }, 500);
+    } else {
+        // Si no has iniciado sesión, te muestra la pantalla negra de Login
+        const loginScreen = document.getElementById("login-screen");
+        loginScreen.style.display = "flex";
+        // Pequeño retraso para que la animación se vea suave
+        setTimeout(() => {
+            loginScreen.classList.remove("out");
+        }, 10);
+    }
+}
+</script>
+</body>
+</html>
+<script>
+// Se ha eliminado la función doLogin() duplicada para que funcione la principal
+
+function togglePass() {
+    const passInput = document.getElementById("login-pass");
+    const eyeIcon = document.getElementById("eye-icon");
+    if (passInput.type === "password") {
+        passInput.type = "text";
+        eyeIcon.classList.remove("fa-eye");
+        eyeIcon.classList.add("fa-eye-slash");
+    } else {
+        passInput.type = "password";
+        eyeIcon.classList.remove("fa-eye-slash");
+        eyeIcon.classList.add("fa-eye");
+    }
+}
+
+function openLoginOrDash() {
+    // Si ya tienes la sesión iniciada, te lleva al Workspace
+    if (typeof userName !== 'undefined' && userName !== null) {
+        document.getElementById("login-screen").classList.add("out");
+        setTimeout(() => {
+            document.getElementById("login-screen").style.display = "none";
+        }, 500);
+    } else {
+        // Si no has iniciado sesión, te muestra la pantalla negra de Login
+        const loginScreen = document.getElementById("login-screen");
+        loginScreen.style.display = "flex";
+        // Pequeño retraso para que la animación se vea suave
+        setTimeout(() => {
+            loginScreen.classList.remove("out");
+        }, 10);
+    }
+}
+</script>
+</body>
+</html>
+<script>
+// Se ha eliminado la función doLogin() duplicada para que funcione la principal
+
+function togglePass() {
+    const passInput = document.getElementById("login-pass");
+    const eyeIcon = document.getElementById("eye-icon");
+    if (passInput.type === "password") {
+        passInput.type = "text";
+        eyeIcon.classList.remove("fa-eye");
+        eyeIcon.classList.add("fa-eye-slash");
+    } else {
+        passInput.type = "password";
+        eyeIcon.classList.remove("fa-eye-slash");
+        eyeIcon.classList.add("fa-eye");
+    }
+}
+
+function openLoginOrDash() {
+    // Si ya tienes la sesión iniciada, te lleva al Workspace
+    if (typeof userName !== 'undefined' && userName !== null) {
+        document.getElementById("login-screen").classList.add("out");
+        setTimeout(() => {
+            document.getElementById("login-screen").style.display = "none";
+        }, 500);
+    } else {
+        // Si no has iniciado sesión, te muestra la pantalla negra de Login
+        const loginScreen = document.getElementById("login-screen");
+        loginScreen.style.display = "flex";
+        // Pequeño retraso para que la animación se vea suave
+        setTimeout(() => {
+            loginScreen.classList.remove("out");
+        }, 10);
+    }
+}
+</script>
+</body>
+</html>
+<script>
+// Se ha eliminado la función doLogin() duplicada para que funcione la principal
+
+function togglePass() {
+    const passInput = document.getElementById("login-pass");
+    const eyeIcon = document.getElementById("eye-icon");
+    if (passInput.type === "password") {
+        passInput.type = "text";
+        eyeIcon.classList.remove("fa-eye");
+        eyeIcon.classList.add("fa-eye-slash");
+    } else {
+        passInput.type = "password";
+        eyeIcon.classList.remove("fa-eye-slash");
+        eyeIcon.classList.add("fa-eye");
+    }
+}
+
+function openLoginOrDash() {
+    // Si ya tienes la sesión iniciada, te lleva al Workspace
+    if (typeof userName !== 'undefined' && userName !== null) {
+        document.getElementById("login-screen").classList.add("out");
+        setTimeout(() => {
+            document.getElementById("login-screen").style.display = "none";
+        }, 500);
+    } else {
+        // Si no has iniciado sesión, te muestra la pantalla negra de Login
+        const loginScreen = document.getElementById("login-screen");
+        loginScreen.style.display = "flex";
+        // Pequeño retraso para que la animación se vea suave
+        setTimeout(() => {
+            loginScreen.classList.remove("out");
+        }, 10);
+    }
+}
+</script>
+<script>
+// Se ha eliminado la función doLogin() duplicada para que funcione la principal
+
+function togglePass() {
+    const passInput = document.getElementById("login-pass");
+    const eyeIcon = document.getElementById("eye-icon");
+    if (passInput.type === "password") {
+        passInput.type = "text";
+        eyeIcon.classList.remove("fa-eye");
+        eyeIcon.classList.add("fa-eye-slash");
+    } else {
+        passInput.type = "password";
+        eyeIcon.classList.remove("fa-eye-slash");
+        eyeIcon.classList.add("fa-eye");
+    }
+}
+
+function openLoginOrDash() {
+    // Si ya tienes la sesión iniciada, te lleva al Workspace
+    if (typeof userName !== 'undefined' && userName !== null) {
+        document.getElementById("login-screen").classList.add("out");
+        setTimeout(() => {
+            document.getElementById("login-screen").style.display = "none";
+        }, 500);
+    } else {
+        // Si no has iniciado sesión, te muestra la pantalla negra de Login
+        const loginScreen = document.getElementById("login-screen");
+        loginScreen.style.display = "flex";
+        // Pequeño retraso para que la animación se vea suave
+        setTimeout(() => {
+            loginScreen.classList.remove("out");
+        }, 10);
+    }
+}
+</script>
+</body>
+</html>
+
