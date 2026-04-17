@@ -15,6 +15,69 @@
 <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 
+<!-- ══════════════════════════════════════════════════════ -->
+
+<!-- 🔥 FIREBASE — PON AQUÍ TUS CLAVES                     -->
+
+<!-- ══════════════════════════════════════════════════════ -->
+
+<!-- PASO 1: Ve a https://console.firebase.google.com      -->
+
+<!-- PASO 2: Crea proyecto → Agrega app Web                -->
+
+<!-- PASO 3: Copia el objeto firebaseConfig y pégalo aquí  -->
+
+<!-- PASO 4: En Authentication → Sign-in → activa Google   -->
+
+<!-- PASO 5: En Firestore Database → Crea base de datos    -->
+
+<!--         Reglas recomendadas para Firestore:            -->
+
+<!--   rules_version = '2';                                -->
+
+<!--   service cloud.firestore {                           -->
+
+<!--     match /databases/{database}/documents {           -->
+
+<!--       match /users/{userId}/{document=**} {           -->
+
+<!--         allow read, write: if request.auth.uid==userId;-->
+
+<!--       }                                               -->
+
+<!--     }                                                 -->
+
+<!--   }                                                   -->
+
+<!-- ══════════════════════════════════════════════════════ -->
+
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+  import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged }
+    from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+  import { getFirestore, doc, setDoc, getDoc, collection, getDocs, deleteDoc, writeBatch }
+    from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+  // ▼▼▼ PEGA AQUÍ TU firebaseConfig ▼▼▼
+  const firebaseConfig = {
+    apiKey:            "AIzaSyBwFvB8PvkuOEWI4PFN051CkpC0J5u9e1o",
+    authDomain:        "stressout-fd994.firebaseapp.com",
+    projectId:         "stressout-fd994",
+    storageBucket:     "stressout-fd994.firebasestorage.app",
+    messagingSenderId: "963445606892",
+    appId:             "1:963445606892:web:397436586282cf8eab18c9"
+  };
+  // ▲▲▲ FIN CONFIGURACIÓN ▲▲▲
+
+  const app  = initializeApp(firebaseConfig);
+  const auth = getAuth(app);
+  const db   = getFirestore(app);
+
+  // ── Exponer globalmente para el resto del JS ──
+  window._fb = { auth, db, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged,
+                 doc, setDoc, getDoc, collection, getDocs, deleteDoc, writeBatch };
+</script>
+
 <script>
   tailwind.config = {
     theme: {
@@ -488,8 +551,9 @@ body.dark select.input {
     </div>
 
 ```
+<!-- Avatar selector (se guarda en Firestore) -->
 <div class="mb-5">
-  <p style="font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:rgba(255,255,255,.35);margin-bottom:.5rem;">Avatar</p>
+  <p style="font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:rgba(255,255,255,.35);margin-bottom:.5rem;">Elige tu avatar</p>
   <div style="display:flex;gap:.5rem;flex-wrap:wrap;">
     <div class="avatar-opt selected" data-avatar="🦊" onclick="selectAvatar(this,'🦊')">🦊</div>
     <div class="avatar-opt" data-avatar="🐺" onclick="selectAvatar(this,'🐺')">🐺</div>
@@ -500,29 +564,34 @@ body.dark select.input {
   </div>
 </div>
 
-<div class="mb-4">
-  <p style="font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:rgba(255,255,255,.35);margin-bottom:.4rem;">Nombre</p>
-  <input type="text" id="login-name" class="login-input" placeholder="Ej: Álex, María, Carlos..." maxlength="24" autocomplete="off">
+<!-- Estado de carga Firebase -->
+<div id="login-loading" style="display:none;text-align:center;padding:1.5rem 0;">
+  <i class="fas fa-spinner fa-spin" style="font-size:1.5rem;color:rgba(255,255,255,.5);"></i>
+  <p style="font-size:.8rem;color:rgba(255,255,255,.4);margin-top:.5rem;">Cargando tus datos...</p>
 </div>
 
-<div class="mb-6">
-  <p style="font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:rgba(255,255,255,.35);margin-bottom:.4rem;">Contraseña</p>
-  <div style="position:relative;">
-    <input type="password" id="login-pass" class="login-input" placeholder="Mínimo 4 caracteres" maxlength="30" autocomplete="off" style="padding-right:2.75rem;" onkeydown="if(event.key==='Enter') doLogin()">
-    <button type="button" onclick="togglePass()" style="position:absolute;right:.875rem;top:50%;transform:translateY(-50%);background:none;border:none;color:rgba(255,255,255,.35);cursor:pointer;padding:0;">
-      <i class="fas fa-eye text-sm" id="eye-icon"></i>
-    </button>
-  </div>
-  <p style="font-size:.7rem;color:rgba(255,255,255,.2);margin-top:.4rem;"><i class="fas fa-info-circle" style="margin-right:.25rem;"></i>Simulado — cualquier contraseña funciona.</p>
-</div>
+<!-- Botón Google -->
+<div id="login-actions">
+  <button id="btn-google-login" onclick="doGoogleLogin()"
+    style="width:100%;display:flex;align-items:center;justify-content:center;gap:.75rem;
+           background:#fff;border:none;border-radius:10px;padding:.9rem;
+           font-family:var(--font-display);font-weight:800;font-size:.9rem;
+           color:#1F2937;cursor:pointer;transition:all .18s;
+           box-shadow:0 4px 16px rgba(0,0,0,.25);"
+    onmouseover="this.style.transform='translateY(-1px)';this.style.boxShadow='0 8px 24px rgba(0,0,0,.35)'"
+    onmouseout="this.style.transform='';this.style.boxShadow='0 4px 16px rgba(0,0,0,.25)'">
+    <svg width="20" height="20" viewBox="0 0 48 48">
+      <path fill="#FFC107" d="M43.6 20.1H42V20H24v8h11.3C33.7 32.7 29.3 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.8 1.1 7.9 3l5.7-5.7C34 6.5 29.3 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20 20-8.9 20-20c0-1.3-.1-2.7-.4-3.9z"/>
+      <path fill="#FF3D00" d="M6.3 14.7l6.6 4.8C14.7 16 19 12 24 12c3.1 0 5.8 1.1 7.9 3l5.7-5.7C34 6.5 29.3 4 24 4 16.3 4 9.7 8.3 6.3 14.7z"/>
+      <path fill="#4CAF50" d="M24 44c5.2 0 9.9-2 13.4-5.2l-6.2-5.2C29.3 35.2 26.8 36 24 36c-5.2 0-9.6-3.2-11.3-7.8l-6.5 5C9.7 39.7 16.3 44 24 44z"/>
+      <path fill="#1976D2" d="M43.6 20.1H42V20H24v8h11.3c-.8 2.3-2.3 4.3-4.3 5.6l6.2 5.2C41 35.6 44 30.2 44 24c0-1.3-.1-2.7-.4-3.9z"/>
+    </svg>
+    Continuar con Google
+  </button>
 
-<button class="login-btn" onclick="doLogin()">
-  <i class="fas fa-arrow-right-to-bracket" style="margin-right:.5rem;"></i>Entrar al Workspace
-</button>
-
-<div id="saved-users-section" class="hidden" style="margin-top:1.25rem;">
-  <p style="font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:rgba(255,255,255,.2);text-align:center;margin-bottom:.625rem;">Acceso rápido</p>
-  <div id="saved-users-list" style="display:flex;gap:.5rem;flex-wrap:wrap;justify-content:center;"></div>
+  <p style="font-size:.72rem;color:rgba(255,255,255,.18);text-align:center;margin-top:1rem;">
+    Tus datos se guardan de forma segura en la nube vinculados a tu cuenta Google.
+  </p>
 </div>
 ```
 
@@ -677,36 +746,39 @@ body.dark select.input {
   Empezar gratis <i class="fas fa-arrow-right"></i>
 </button>
 
-        </div>
-        <div class="card" style="padding:2rem;border:2px solid var(--cobalt);position:relative;box-shadow:0 16px 40px rgba(37,99,235,.12);">
-          <span style="position:absolute;top:-13px;left:50%;transform:translateX(-50%);background:var(--cobalt);color:#fff;font-size:.72rem;font-weight:800;padding:.3rem .875rem;border-radius:100px;font-family:var(--font-display);letter-spacing:.04em;">RECOMENDADO</span>
-          <p style="font-size:.72rem;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:var(--cobalt);margin-bottom:.5rem;font-family:var(--font-display);">Pro</p>
-          <div style="display:flex;align-items:baseline;gap:.375rem;margin-bottom:.25rem;">
-            <p style="font-family:var(--font-display);font-size:2.75rem;font-weight:800;letter-spacing:-.02em;">$12</p>
-            <p style="font-size:.875rem;color:var(--ink-300);">/mes</p>
-          </div>
-          <p style="font-size:.875rem;color:var(--ink-400);margin-bottom:1.5rem;">Desbloquea IA avanzada y reportes PDF.</p>
-          <ul style="list-style:none;display:flex;flex-direction:column;gap:.625rem;margin-bottom:1.75rem;">
-            <li style="font-size:.875rem;display:flex;align-items:center;gap:.5rem;"><i class="fas fa-check" style="color:var(--cobalt);width:14px;"></i>Todo lo de Starter</li>
-            <li style="font-size:.875rem;display:flex;align-items:center;gap:.5rem;"><i class="fas fa-check" style="color:var(--cobalt);width:14px;"></i>Reportes PDF con IA</li>
-            <li style="font-size:.875rem;display:flex;align-items:center;gap:.5rem;"><i class="fas fa-check" style="color:var(--cobalt);width:14px;"></i>Gestión de exámenes</li>
-            <li style="font-size:.875rem;display:flex;align-items:center;gap:.5rem;"><i class="fas fa-check" style="color:var(--cobalt);width:14px;"></i>Agenda semanal visual</li>
-          </ul>
-          <button class="btn btn-primary open-dash-btn" style="width:100%;justify-content:center;background:var(--cobalt);" onclick="selectPlan('pro')">Probar 14 días gratis</button>
-        </div>
-        <div class="card" style="padding:2rem;">
-          <p style="font-size:.72rem;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:var(--ink-300);margin-bottom:.5rem;font-family:var(--font-display);">Enterprise</p>
-          <p style="font-family:var(--font-display);font-size:2rem;font-weight:800;letter-spacing:-.02em;margin-bottom:.25rem;margin-top:.375rem;">A medida</p>
-          <p style="font-size:.875rem;color:var(--ink-400);margin-bottom:1.5rem;">Para academias, universidades y grupos grandes.</p>
-          <ul style="list-style:none;display:flex;flex-direction:column;gap:.625rem;margin-bottom:1.75rem;">
-            <li style="font-size:.875rem;display:flex;align-items:center;gap:.5rem;"><i class="fas fa-check" style="color:var(--ink);width:14px;"></i>Workspaces ilimitados</li>
-            <li style="font-size:.875rem;display:flex;align-items:center;gap:.5rem;"><i class="fas fa-check" style="color:var(--ink);width:14px;"></i>API integrada</li>
-            <li style="font-size:.875rem;display:flex;align-items:center;gap:.5rem;"><i class="fas fa-check" style="color:var(--ink);width:14px;"></i>Soporte 24/7</li>
-          </ul>
-          <button class="btn btn-ghost" style="width:100%;justify-content:center;" onclick="selectPlan('enterprise')">Contactar ventas</button>
-        </div>
-      </div>
+```
     </div>
+    <div class="card" style="padding:2rem;border:2px solid var(--cobalt);position:relative;box-shadow:0 16px 40px rgba(37,99,235,.12);">
+      <span style="position:absolute;top:-13px;left:50%;transform:translateX(-50%);background:var(--cobalt);color:#fff;font-size:.72rem;font-weight:800;padding:.3rem .875rem;border-radius:100px;font-family:var(--font-display);letter-spacing:.04em;">RECOMENDADO</span>
+      <p style="font-size:.72rem;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:var(--cobalt);margin-bottom:.5rem;font-family:var(--font-display);">Pro</p>
+      <div style="display:flex;align-items:baseline;gap:.375rem;margin-bottom:.25rem;">
+        <p style="font-family:var(--font-display);font-size:2.75rem;font-weight:800;letter-spacing:-.02em;">$12</p>
+        <p style="font-size:.875rem;color:var(--ink-300);">/mes</p>
+      </div>
+      <p style="font-size:.875rem;color:var(--ink-400);margin-bottom:1.5rem;">Desbloquea IA avanzada y reportes PDF.</p>
+      <ul style="list-style:none;display:flex;flex-direction:column;gap:.625rem;margin-bottom:1.75rem;">
+        <li style="font-size:.875rem;display:flex;align-items:center;gap:.5rem;"><i class="fas fa-check" style="color:var(--cobalt);width:14px;"></i>Todo lo de Starter</li>
+        <li style="font-size:.875rem;display:flex;align-items:center;gap:.5rem;"><i class="fas fa-check" style="color:var(--cobalt);width:14px;"></i>Reportes PDF con IA</li>
+        <li style="font-size:.875rem;display:flex;align-items:center;gap:.5rem;"><i class="fas fa-check" style="color:var(--cobalt);width:14px;"></i>Gestión de exámenes</li>
+        <li style="font-size:.875rem;display:flex;align-items:center;gap:.5rem;"><i class="fas fa-check" style="color:var(--cobalt);width:14px;"></i>Agenda semanal visual</li>
+      </ul>
+      <button class="btn btn-primary open-dash-btn" style="width:100%;justify-content:center;background:var(--cobalt);" onclick="selectPlan('pro')">Probar 14 días gratis</button>
+    </div>
+    <div class="card" style="padding:2rem;">
+      <p style="font-size:.72rem;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:var(--ink-300);margin-bottom:.5rem;font-family:var(--font-display);">Enterprise</p>
+      <p style="font-family:var(--font-display);font-size:2rem;font-weight:800;letter-spacing:-.02em;margin-bottom:.25rem;margin-top:.375rem;">A medida</p>
+      <p style="font-size:.875rem;color:var(--ink-400);margin-bottom:1.5rem;">Para academias, universidades y grupos grandes.</p>
+      <ul style="list-style:none;display:flex;flex-direction:column;gap:.625rem;margin-bottom:1.75rem;">
+        <li style="font-size:.875rem;display:flex;align-items:center;gap:.5rem;"><i class="fas fa-check" style="color:var(--ink);width:14px;"></i>Workspaces ilimitados</li>
+        <li style="font-size:.875rem;display:flex;align-items:center;gap:.5rem;"><i class="fas fa-check" style="color:var(--ink);width:14px;"></i>API integrada</li>
+        <li style="font-size:.875rem;display:flex;align-items:center;gap:.5rem;"><i class="fas fa-check" style="color:var(--ink);width:14px;"></i>Soporte 24/7</li>
+      </ul>
+      <button class="btn btn-ghost" style="width:100%;justify-content:center;" onclick="selectPlan('enterprise')">Contactar ventas</button>
+    </div>
+  </div>
+</div>
+```
+
   </section>
 
   <footer style="border-top:1px solid var(--border);padding:2rem 1.5rem;">
@@ -786,7 +858,10 @@ body.dark select.input {
 
   <div style="flex:1;display:flex;flex-direction:column;overflow:hidden;">
     <header class="dash-header">
-      <h2 id="header-title" style="font-family:var(--font-display);font-size:1rem;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--ink);">Inicio / Hoy</h2>
+      <div style="display:flex;flex-direction:column;gap:.1rem;">
+        <h2 id="header-title" style="font-family:var(--font-display);font-size:1rem;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--ink);">Inicio / Hoy</h2>
+        <p id="header-live-date" style="font-size:.72rem;color:var(--ink-300);font-weight:500;"></p>
+      </div>
       <div style="display:flex;align-items:center;gap:.625rem;">
         <button onclick="toggleDarkMode()" style="width:34px;height:34px;border-radius:8px;background:var(--ink-100);border:1.5px solid var(--border);cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--ink-400);" title="Modo oscuro">
           <i class="fas fa-moon" style="font-size:.8rem;"></i>
@@ -806,7 +881,7 @@ body.dark select.input {
       <div class="card" style="grid-column:1/-1;padding:1.25rem 1.5rem;background:var(--ink);border-color:var(--ink);display:flex;align-items:center;gap:1rem;">
         <div style="width:42px;height:42px;border-radius:10px;background:rgba(200,255,0,.12);display:flex;align-items:center;justify-content:center;flex-shrink:0;"><i class="fas fa-wand-magic-sparkles" style="color:var(--volt);"></i></div>
         <div>
-          <p style="font-family:var(--font-display);font-weight:700;color:#fff;font-size:.9rem;">IA: Sugerencia de Hoy</p>
+          <p style="font-family:var(--font-display);font-weight:700;color:#fff;font-size:.9rem;">IA: Sugerencia de Hoy · <span id="inicio-fecha-hoy" style="color:var(--volt);font-weight:600;"></span></p>
           <p style="font-size:.82rem;color:rgba(255,255,255,.55);">He organizado tus tareas por prioridad. Céntrate solo en la lista de abajo.</p>
         </div>
       </div>
@@ -1186,17 +1261,15 @@ body.dark select.input {
 'use strict';
 
 // ─── STATE ───────────────────────────────
-let tasks   = JSON.parse(localStorage.getItem('so_tasks')   || '[]');
-let classes = JSON.parse(localStorage.getItem('so_classes') || '[]');
-let exams   = JSON.parse(localStorage.getItem('so_exams')   || '[]');
-let stats   = JSON.parse(localStorage.getItem('so_stats')   || JSON.stringify({
-  focusSeconds: 0, stressLevel: 'Óptimo',
-  weeklyDone: [0,0,0,0,0,0,0], streak: 0, lastLogin: null
-}));
+let tasks   = [];
+let classes = [];
+let exams   = [];
+let stats   = { focusSeconds: 0, stressLevel: 'Óptimo', weeklyDone: [0,0,0,0,0,0,0], streak: 0, lastLogin: null };
 
-let userName       = localStorage.getItem('so_user')   || null;
-let userAvatar     = localStorage.getItem('so_avatar') || '🦊';
-let selectedAvatar = userAvatar;
+let userName       = null;
+let userAvatar     = '🦊';
+let selectedAvatar = '🦊';
+let _currentUID    = null;  // Firebase UID del usuario logueado
 let selectedColor  = 'urgent';
 let editingId      = null;
 let sidebarOpen    = true;
@@ -1211,11 +1284,55 @@ const PRIO_WEIGHT = { urgent:4, high:3, medium:2, normal:1 };
 const PRIO_BG     = { urgent:'#F43F5E', high:'#F59E0B', medium:'#10B981', normal:'#2563EB' };
 const PRIO_LIGHT  = { urgent:'#FFF1F2', high:'#FFFBEB', medium:'#ECFDF5', normal:'#EFF6FF' };
 
-// ─── STORAGE ─────────────────────────────
-const save       = () => localStorage.setItem('so_tasks',   JSON.stringify(tasks));
-const saveStats  = () => localStorage.setItem('so_stats',   JSON.stringify(stats));
-const saveClasses= () => localStorage.setItem('so_classes', JSON.stringify(classes));
-const saveExams  = () => localStorage.setItem('so_exams',   JSON.stringify(exams));
+// ─── STORAGE (Firebase Firestore) ────────
+function _uid() { return _currentUID; }
+
+async function save() {
+  if (!_uid()) return;
+  const { doc, setDoc, db } = window._fb;
+  await setDoc(doc(db,'users',_uid(),'data','tasks'), { list: tasks });
+}
+async function saveStats() {
+  if (!_uid()) return;
+  const { doc, setDoc, db } = window._fb;
+  await setDoc(doc(db,'users',_uid(),'data','stats'), stats);
+}
+async function saveClasses() {
+  if (!_uid()) return;
+  const { doc, setDoc, db } = window._fb;
+  await setDoc(doc(db,'users',_uid(),'data','classes'), { list: classes });
+}
+async function saveExams() {
+  if (!_uid()) return;
+  const { doc, setDoc, db } = window._fb;
+  await setDoc(doc(db,'users',_uid(),'data','exams'), { list: exams });
+}
+async function saveAvatar() {
+  if (!_uid()) return;
+  const { doc, setDoc, db } = window._fb;
+  await setDoc(doc(db,'users',_uid(),'data','profile'), { avatar: userAvatar, name: userName });
+}
+
+async function loadUserData() {
+  if (!_uid()) return;
+  const { doc, getDoc, db } = window._fb;
+  const uid = _uid();
+  const [tSnap, sSnap, cSnap, eSnap, pSnap] = await Promise.all([
+    getDoc(doc(db,'users',uid,'data','tasks')),
+    getDoc(doc(db,'users',uid,'data','stats')),
+    getDoc(doc(db,'users',uid,'data','classes')),
+    getDoc(doc(db,'users',uid,'data','exams')),
+    getDoc(doc(db,'users',uid,'data','profile')),
+  ]);
+  tasks   = tSnap.exists() ? (tSnap.data().list || []) : [];
+  stats   = sSnap.exists() ? sSnap.data() : { focusSeconds:0, stressLevel:'Óptimo', weeklyDone:[0,0,0,0,0,0,0], streak:0, lastLogin:null };
+  classes = cSnap.exists() ? (cSnap.data().list || []) : [];
+  exams   = eSnap.exists() ? (eSnap.data().list || []) : [];
+  if (pSnap.exists()) {
+    const p = pSnap.data();
+    if (p.avatar) { userAvatar = p.avatar; selectedAvatar = p.avatar; }
+  }
+}
 
 // ─── LOGIN ────────────────────────────────
 function selectAvatar(el, av) {
@@ -1224,60 +1341,26 @@ function selectAvatar(el, av) {
   selectedAvatar = av;
 }
 
-function togglePass() {
-  const inp = document.getElementById('login-pass');
-  const ico = document.getElementById('eye-icon');
-  inp.type = inp.type === 'password' ? 'text' : 'password';
-  ico.className = inp.type === 'password' ? 'fas fa-eye text-sm' : 'fas fa-eye-slash text-sm';
+// ─── GOOGLE LOGIN (Firebase Auth) ────────
+async function doGoogleLogin() {
+  if (!window._fb) { showToast('Firebase no configurado. Añade tus claves.', 'error'); return; }
+  const { auth, GoogleAuthProvider, signInWithPopup } = window._fb;
+  const btn = document.getElementById('btn-google-login');
+  if (btn) { btn.disabled = true; btn.style.opacity = '.6'; }
+  try {
+    const provider = new GoogleAuthProvider();
+    await signInWithPopup(auth, provider);
+  } catch(e) {
+    console.error(e);
+    showToast('Error al iniciar sesión. Inténtalo de nuevo.', 'error');
+    if (btn) { btn.disabled = false; btn.style.opacity = '1'; }
+  }
 }
 
-function doLogin() {
-  const name = document.getElementById('login-name').value.trim();
-  const pass = document.getElementById('login-pass').value.trim();
-  if (!name) {
-    const inp = document.getElementById('login-name');
-    inp.style.borderColor = '#F43F5E';
-    inp.focus();
-    setTimeout(() => inp.style.borderColor = '', 2000);
-    return;
-  }
-  if (pass.length < 4) { showToast('Contraseña demasiado corta (mín. 4 caracteres)'); return; }
-
-  userName = name;
-  userAvatar = selectedAvatar;
-  localStorage.setItem('so_user', name);
-  localStorage.setItem('so_avatar', selectedAvatar);
-
-  let saved = JSON.parse(localStorage.getItem('so_saved_users') || '[]');
-  const existingIdx = saved.findIndex(u => u.name === name);
-  if (existingIdx === -1) {
-    saved.push({ name, avatar: selectedAvatar });
-    if (saved.length > 4) saved = saved.slice(-4);
-  } else {
-    saved[existingIdx].avatar = selectedAvatar;
-  }
-  localStorage.setItem('so_saved_users', JSON.stringify(saved));
-
-  document.getElementById('login-screen').classList.add('out');
-  updateSidebarUser();
-  checkLoginStatus();
-  openDash();
-  showToast(`¡Bienvenido, ${name}! 🎉`);
-  try { canvasConfetti({ particleCount: 80, spread: 60, origin: { y: .6 } }); } catch(e) {}
-}
-
-function doLogout() {
+async function doLogout() {
   hideLogoutConfirm();
-  userName = null; userAvatar = '🦊';
-  localStorage.removeItem('so_user');
-  localStorage.removeItem('so_avatar');
-  document.getElementById('dashboard').style.transform = 'translateX(-100%)';
-  const ls = document.getElementById('login-screen');
-  ls.classList.remove('out');
-  document.getElementById('login-name').value = '';
-  document.getElementById('login-pass').value = '';
-  loadSavedUsers();
-  showToast('Sesión cerrada. ¡Hasta pronto!');
+  const { auth, signOut } = window._fb;
+  await signOut(auth);
 }
 
 function showLogoutConfirm() {
@@ -1287,47 +1370,38 @@ function hideLogoutConfirm() {
   document.getElementById('logout-confirm').classList.add('hidden');
 }
 
-function loadSavedUsers() {
-  const saved = JSON.parse(localStorage.getItem('so_saved_users') || '[]');
-  const sec  = document.getElementById('saved-users-section');
-  const list = document.getElementById('saved-users-list');
-  if (!saved.length) { sec.classList.add('hidden'); return; }
-  sec.classList.remove('hidden');
-  list.innerHTML = saved.map(u => `
-    <button onclick="quickLogin('${u.name.replace(/'/g,"\\'")}','${u.avatar}')"
-      style="display:flex;flex-direction:column;align-items:center;gap:.25rem;padding:.5rem .625rem;border-radius:9px;background:rgba(255,255,255,.06);border:none;cursor:pointer;transition:background .15s;"
-      onmouseover="this.style.background='rgba(255,255,255,.12)'"
-      onmouseout="this.style.background='rgba(255,255,255,.06)'">
-      <span style="font-size:1.25rem;">${u.avatar}</span>
-      <span style="font-size:.68rem;font-weight:700;color:rgba(255,255,255,.6);max-width:56px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${u.name}</span>
-    </button>`).join('');
-}
-
-function quickLogin(name, avatar) {
-  document.getElementById('login-name').value = name;
-  document.getElementById('login-pass').value = 'quick1234';
-  document.querySelectorAll('.avatar-opt').forEach(el => {
-    if (el.dataset.avatar === avatar) { el.classList.add('selected'); selectedAvatar = avatar; }
-    else el.classList.remove('selected');
-  });
-  doLogin();
-}
+// Stubs de compatibilidad (ya no se usan)
+function loadSavedUsers() {}
+function togglePass() {}
+function doLogin() {}
+function quickLogin() {}
 
 function updateSidebarUser() {
   const n = document.getElementById('sidebar-user-name');
   const a = document.getElementById('sidebar-avatar');
   const w = document.getElementById('sidebar-workspace-name');
-  if (n) n.textContent = userName || 'Usuario';
-  if (a) a.textContent = userAvatar || '🦊';
-  if (w) w.textContent = userName ? `WS de ${userName}` : 'Workspace';
+  const shortName = userName ? userName.split(' ')[0] : 'Usuario';
+  if (n) n.textContent = shortName;
+  if (a) {
+    // Mostrar foto de Google si está disponible, si no el avatar emoji
+    const { auth } = window._fb || {};
+    const photoURL = auth && auth.currentUser && auth.currentUser.photoURL;
+    if (photoURL) {
+      a.innerHTML = `<img src="${photoURL}" style="width:34px;height:34px;border-radius:8px;object-fit:cover;" onerror="this.parentElement.textContent='${userAvatar}'">`;
+    } else {
+      a.textContent = userAvatar || '🦊';
+    }
+  }
+  if (w) w.textContent = shortName ? `WS de ${shortName}` : 'Workspace';
 }
 
 function checkLoginStatus() {
   if (!userName) return;
   updateSidebarUser();
   const hBtn = document.getElementById('btn-login-header');
+  const shortName = userName.split(' ')[0];
   if (hBtn) {
-    hBtn.innerHTML = `<span style="font-size:1rem;">${userAvatar}</span><span>Hola, ${userName}</span>`;
+    hBtn.innerHTML = `<span style="font-size:1rem;">${userAvatar}</span><span>Hola, ${shortName}</span>`;
     hBtn.onclick = () => openDash();
   }
   calcStreak();
@@ -1335,7 +1409,9 @@ function checkLoginStatus() {
 
 function openLoginOrDash() {
   if (!userName) {
-    document.getElementById('login-screen').classList.remove('out');
+    const ls = document.getElementById('login-screen');
+    ls.style.display = 'flex';
+    setTimeout(() => ls.classList.remove('out'), 10);
   } else {
     openDash();
   }
@@ -1460,7 +1536,15 @@ function colorLight(c) { return PRIO_LIGHT[c] || '#EFF6FF'; }
 function renderHoy() {
   const el = document.getElementById('hoy-task-list');
   if (!el) return;
-  const today = new Date().toISOString().split('T')[0];
+  const now = new Date();
+  const today = now.toISOString().split('T')[0];
+  // Update the date badge in the inicio banner
+  const fechaEl = document.getElementById('inicio-fecha-hoy');
+  if (fechaEl) {
+    const dias = ['Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'];
+    const meses = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+    fechaEl.textContent = `${dias[now.getDay()]} ${now.getDate()} ${meses[now.getMonth()]}`;
+  }
   const list = tasks
     .filter(t => t.date === today && t.status !== 'done')
     .sort((a, b) => (PRIO_WEIGHT[b.color] || 0) - (PRIO_WEIGHT[a.color] || 0));
@@ -2453,9 +2537,19 @@ const AppController = {
   }
 };
 
+// ─── LIVE DATE in header ─────────────────
+function updateLiveDate() {
+  const el = document.getElementById('header-live-date');
+  if (!el) return;
+  const now = new Date();
+  const dias = ['Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'];
+  const meses = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
+  el.textContent = `${dias[now.getDay()]}, ${now.getDate()} de ${meses[now.getMonth()]} de ${now.getFullYear()}`;
+}
+
 // ─── INIT ────────────────────────────────
 document.addEventListener('DOMContentLoaded', () => {
-  // Restore settings
+  // Restore UI settings (no data — esos vienen de Firebase)
   if (localStorage.getItem('so_dark') === '1') document.body.classList.add('dark');
   const theme = localStorage.getItem('so_theme');
   if (theme && theme !== 'default') document.body.classList.add('theme-' + theme);
@@ -2465,14 +2559,6 @@ document.addEventListener('DOMContentLoaded', () => {
   const startView = document.getElementById('view-inicio');
   if (startView) { startView.style.display = 'block'; startView.classList.add('active'); }
 
-  // Login state
-  loadSavedUsers();
-  if (userName) {
-    document.getElementById('login-screen').classList.add('out');
-    updateSidebarUser();
-    checkLoginStatus();
-  }
-
   // Responsive sidebar
   if (window.innerWidth < 768) {
     const sb = document.getElementById('sidebar');
@@ -2481,233 +2567,86 @@ document.addEventListener('DOMContentLoaded', () => {
 
   AppController.init();
   bindKanbanDrop();
-  renderCalendar();
-  renderKanban();
-  renderHoy();
-  updateMiniTasks();
-  renderHorario();
-  renderExams();
-  renderAgenda();
+  updateLiveDate();
+  setInterval(updateLiveDate, 60000); // actualizar cada minuto
+
+  // ── Firebase Auth observer ──
+  // Esperar a que el módulo de Firebase esté disponible
+  const waitForFB = setInterval(() => {
+    if (!window._fb) return;
+    clearInterval(waitForFB);
+    const { auth, onAuthStateChanged } = window._fb;
+
+    onAuthStateChanged(auth, async (user) => {
+      if (user) {
+        // Usuario autenticado
+        _currentUID = user.uid;
+        userName    = user.displayName || user.email || 'Usuario';
+        userAvatar  = selectedAvatar;  // avatar elegido antes de login
+
+        // Mostrar spinner de carga
+        const lsEl = document.getElementById('login-screen');
+        const actEl = document.getElementById('login-actions');
+        const ldEl  = document.getElementById('login-loading');
+        if (actEl) actEl.style.display = 'none';
+        if (ldEl)  ldEl.style.display  = 'block';
+
+        // Cargar datos del usuario desde Firestore
+        await loadUserData();
+
+        // Si el usuario había elegido un avatar nuevo antes de hacer login, guardarlo
+        if (selectedAvatar && selectedAvatar !== '🦊') {
+          userAvatar = selectedAvatar;
+          await saveAvatar();
+        }
+
+        // Ocultar login
+        if (lsEl) { lsEl.classList.add('out'); setTimeout(() => { lsEl.style.display = 'none'; lsEl.classList.remove('out'); if (actEl) actEl.style.display='block'; if (ldEl) ldEl.style.display='none'; }, 500); }
+
+        updateSidebarUser();
+        checkLoginStatus();
+        openDash();
+        renderCalendar();
+        renderKanban();
+        renderHoy();
+        updateMiniTasks();
+        renderHorario();
+        renderExams();
+        renderAgenda();
+        AppController.updateAnalytics();
+        showToast('¡Bienvenido, ' + userName.split(' ')[0] + '! 🎉');
+        try { canvasConfetti({ particleCount: 80, spread: 60, origin: { y: .6 } }); } catch(e) {}
+      } else {
+        // Sin sesión — mostrar pantalla de login
+        _currentUID = null;
+        userName    = null;
+        userAvatar  = '🦊';
+        tasks = []; classes = []; exams = [];
+        stats = { focusSeconds:0, stressLevel:'Óptimo', weeklyDone:[0,0,0,0,0,0,0], streak:0, lastLogin:null };
+
+        document.getElementById('dashboard').style.transform = 'translateX(-100%)';
+        const ls = document.getElementById('login-screen');
+        const actEl = document.getElementById('login-actions');
+        const ldEl  = document.getElementById('login-loading');
+        ls.style.display = 'flex';
+        if (actEl) actEl.style.display = 'block';
+        if (ldEl)  ldEl.style.display  = 'none';
+        const btn = document.getElementById('btn-google-login');
+        if (btn) { btn.disabled = false; btn.style.opacity = '1'; }
+        ls.classList.remove('out');
+
+        renderCalendar();
+        renderKanban();
+        renderHoy();
+        updateMiniTasks();
+        renderHorario();
+        renderExams();
+        renderAgenda();
+      }
+    });
+  }, 100);
 });
 </script>
-<script>
-// Se ha eliminado la función doLogin() duplicada para que funcione la principal
 
-function togglePass() {
-    const passInput = document.getElementById("login-pass");
-    const eyeIcon = document.getElementById("eye-icon");
-    if (passInput.type === "password") {
-        passInput.type = "text";
-        eyeIcon.classList.remove("fa-eye");
-        eyeIcon.classList.add("fa-eye-slash");
-    } else {
-        passInput.type = "password";
-        eyeIcon.classList.remove("fa-eye-slash");
-        eyeIcon.classList.add("fa-eye");
-    }
-}
-
-function openLoginOrDash() {
-    // Si ya tienes la sesión iniciada, te lleva al Workspace
-    if (typeof userName !== 'undefined' && userName !== null) {
-        document.getElementById("login-screen").classList.add("out");
-        setTimeout(() => {
-            document.getElementById("login-screen").style.display = "none";
-        }, 500);
-    } else {
-        // Si no has iniciado sesión, te muestra la pantalla negra de Login
-        const loginScreen = document.getElementById("login-screen");
-        loginScreen.style.display = "flex";
-        // Pequeño retraso para que la animación se vea suave
-        setTimeout(() => {
-            loginScreen.classList.remove("out");
-        }, 10);
-    }
-}
-</script>
 </body>
 </html>
-<script>
-// Se ha eliminado la función doLogin() duplicada para que funcione la principal
-
-function togglePass() {
-    const passInput = document.getElementById("login-pass");
-    const eyeIcon = document.getElementById("eye-icon");
-    if (passInput.type === "password") {
-        passInput.type = "text";
-        eyeIcon.classList.remove("fa-eye");
-        eyeIcon.classList.add("fa-eye-slash");
-    } else {
-        passInput.type = "password";
-        eyeIcon.classList.remove("fa-eye-slash");
-        eyeIcon.classList.add("fa-eye");
-    }
-}
-
-function openLoginOrDash() {
-    // Si ya tienes la sesión iniciada, te lleva al Workspace
-    if (typeof userName !== 'undefined' && userName !== null) {
-        document.getElementById("login-screen").classList.add("out");
-        setTimeout(() => {
-            document.getElementById("login-screen").style.display = "none";
-        }, 500);
-    } else {
-        // Si no has iniciado sesión, te muestra la pantalla negra de Login
-        const loginScreen = document.getElementById("login-screen");
-        loginScreen.style.display = "flex";
-        // Pequeño retraso para que la animación se vea suave
-        setTimeout(() => {
-            loginScreen.classList.remove("out");
-        }, 10);
-    }
-}
-</script>
-</body>
-</html>
-<script>
-// Se ha eliminado la función doLogin() duplicada para que funcione la principal
-
-function togglePass() {
-    const passInput = document.getElementById("login-pass");
-    const eyeIcon = document.getElementById("eye-icon");
-    if (passInput.type === "password") {
-        passInput.type = "text";
-        eyeIcon.classList.remove("fa-eye");
-        eyeIcon.classList.add("fa-eye-slash");
-    } else {
-        passInput.type = "password";
-        eyeIcon.classList.remove("fa-eye-slash");
-        eyeIcon.classList.add("fa-eye");
-    }
-}
-
-function openLoginOrDash() {
-    // Si ya tienes la sesión iniciada, te lleva al Workspace
-    if (typeof userName !== 'undefined' && userName !== null) {
-        document.getElementById("login-screen").classList.add("out");
-        setTimeout(() => {
-            document.getElementById("login-screen").style.display = "none";
-        }, 500);
-    } else {
-        // Si no has iniciado sesión, te muestra la pantalla negra de Login
-        const loginScreen = document.getElementById("login-screen");
-        loginScreen.style.display = "flex";
-        // Pequeño retraso para que la animación se vea suave
-        setTimeout(() => {
-            loginScreen.classList.remove("out");
-        }, 10);
-    }
-}
-</script>
-</body>
-</html>
-<script>
-// Se ha eliminado la función doLogin() duplicada para que funcione la principal
-
-function togglePass() {
-    const passInput = document.getElementById("login-pass");
-    const eyeIcon = document.getElementById("eye-icon");
-    if (passInput.type === "password") {
-        passInput.type = "text";
-        eyeIcon.classList.remove("fa-eye");
-        eyeIcon.classList.add("fa-eye-slash");
-    } else {
-        passInput.type = "password";
-        eyeIcon.classList.remove("fa-eye-slash");
-        eyeIcon.classList.add("fa-eye");
-    }
-}
-
-function openLoginOrDash() {
-    // Si ya tienes la sesión iniciada, te lleva al Workspace
-    if (typeof userName !== 'undefined' && userName !== null) {
-        document.getElementById("login-screen").classList.add("out");
-        setTimeout(() => {
-            document.getElementById("login-screen").style.display = "none";
-        }, 500);
-    } else {
-        // Si no has iniciado sesión, te muestra la pantalla negra de Login
-        const loginScreen = document.getElementById("login-screen");
-        loginScreen.style.display = "flex";
-        // Pequeño retraso para que la animación se vea suave
-        setTimeout(() => {
-            loginScreen.classList.remove("out");
-        }, 10);
-    }
-}
-</script>
-</body>
-</html>
-<script>
-// Se ha eliminado la función doLogin() duplicada para que funcione la principal
-
-function togglePass() {
-    const passInput = document.getElementById("login-pass");
-    const eyeIcon = document.getElementById("eye-icon");
-    if (passInput.type === "password") {
-        passInput.type = "text";
-        eyeIcon.classList.remove("fa-eye");
-        eyeIcon.classList.add("fa-eye-slash");
-    } else {
-        passInput.type = "password";
-        eyeIcon.classList.remove("fa-eye-slash");
-        eyeIcon.classList.add("fa-eye");
-    }
-}
-
-function openLoginOrDash() {
-    // Si ya tienes la sesión iniciada, te lleva al Workspace
-    if (typeof userName !== 'undefined' && userName !== null) {
-        document.getElementById("login-screen").classList.add("out");
-        setTimeout(() => {
-            document.getElementById("login-screen").style.display = "none";
-        }, 500);
-    } else {
-        // Si no has iniciado sesión, te muestra la pantalla negra de Login
-        const loginScreen = document.getElementById("login-screen");
-        loginScreen.style.display = "flex";
-        // Pequeño retraso para que la animación se vea suave
-        setTimeout(() => {
-            loginScreen.classList.remove("out");
-        }, 10);
-    }
-}
-</script>
-<script>
-// Se ha eliminado la función doLogin() duplicada para que funcione la principal
-
-function togglePass() {
-    const passInput = document.getElementById("login-pass");
-    const eyeIcon = document.getElementById("eye-icon");
-    if (passInput.type === "password") {
-        passInput.type = "text";
-        eyeIcon.classList.remove("fa-eye");
-        eyeIcon.classList.add("fa-eye-slash");
-    } else {
-        passInput.type = "password";
-        eyeIcon.classList.remove("fa-eye-slash");
-        eyeIcon.classList.add("fa-eye");
-    }
-}
-
-function openLoginOrDash() {
-    // Si ya tienes la sesión iniciada, te lleva al Workspace
-    if (typeof userName !== 'undefined' && userName !== null) {
-        document.getElementById("login-screen").classList.add("out");
-        setTimeout(() => {
-            document.getElementById("login-screen").style.display = "none";
-        }, 500);
-    } else {
-        // Si no has iniciado sesión, te muestra la pantalla negra de Login
-        const loginScreen = document.getElementById("login-screen");
-        loginScreen.style.display = "flex";
-        // Pequeño retraso para que la animación se vea suave
-        setTimeout(() => {
-            loginScreen.classList.remove("out");
-        }, 10);
-    }
-}
-</script>
-</body>
-</html>
-
